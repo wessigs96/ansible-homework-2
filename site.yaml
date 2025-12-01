@@ -1,0 +1,53 @@
+---
+- name: Configure Multiple Loopbacks and EIGRP
+  hosts: routers
+  gather_facts: no
+
+  tasks:
+
+    - name: Configure Loopback0
+      cisco.ios.ios_config:
+        parents: "interface Loopback0"
+        lines:
+          - "ip address 10.0.0.{{ router_id }} 255.255.255.255"
+
+    - name: Configure Loopback1
+      cisco.ios.ios_config:
+        parents: "interface Loopback1"
+        lines:
+          - "ip address 10.1.1.{{ router_id }} 255.255.255.255"
+
+    - name: Configure Loopback2
+      cisco.ios.ios_config:
+        parents: "interface Loopback2"
+        lines:
+          - "ip address 10.2.2.{{ router_id }} 255.255.255.255"
+
+    - name: Configure EIGRP AS 100
+      cisco.ios.ios_config:
+        lines:
+          - "router eigrp 100"
+          - "network 10.0.0.0 0.0.0.255"
+          - "network 10.1.1.0 0.0.0.255"
+          - "network 10.2.2.0 0.0.0.255"
+          - "network {{ mgmt_network_ip }} {{ mgmt_network_wildcard }}"
+
+    - name: Verify EIGRP neighbors
+      cisco.ios.ios_command:
+        commands:
+          - show ip eigrp neighbors
+      register: eigrp_neighbors
+
+    - name: Display EIGRP neighbors
+      debug:
+        var: eigrp_neighbors.stdout_lines
+
+    - name: Show loopback interfaces
+      cisco.ios.ios_command:
+        commands:
+          - show ip interface brief | include Loopback
+      register: loopbacks
+
+    - name: Display loopbacks
+      debug:
+        var: loopbacks.stdout_lines
